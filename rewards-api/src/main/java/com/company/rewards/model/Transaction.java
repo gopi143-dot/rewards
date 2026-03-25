@@ -1,29 +1,38 @@
 package com.company.rewards.model;
 
-import lombok.Data;
-
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "TRANSACTION")
+@NoArgsConstructor
+@AllArgsConstructor
+@Table(name = "CUST_TRANSACTION")
 public class Transaction {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "CUSTOMER_ID")
-    private Long customerId;
+
+    // Many transactions belong to one customer
+    @ManyToOne
+    @JoinColumn(name = "CUSTOMER_ID", nullable = false)
+    @NotNull(message = "Customer is required")
+    private Customer customer;
+
+    @Min(value = 0, message = "Amount must be non-negative")
+    @Column(nullable = false)
     private double amount;
-    @Column(name = "TRANSACTION_DATE")
+
+    @NotNull(message = "Transaction date is required")
+    @PastOrPresent(message = "Transaction date cannot be in the future")
+    @Column(name = "TRANSACTION_DATE", nullable = false)
     private LocalDateTime transactionDate;
-
-    public Transaction(Long id, Long customerId, double amount, LocalDateTime transactionDate) {
-        this.id = id;
-        this.customerId = customerId;
-        this.amount = amount;
-        this.transactionDate = transactionDate;
-    }
-
-    public Transaction() {}
 }

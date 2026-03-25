@@ -1,7 +1,8 @@
 package com.company.rewards.service.impl;
 
-import com.company.rewards.dto.RewardResponseDTO;
-import com.company.rewards.dto.TransactionDTO;
+import com.company.rewards.dto.RewardRequestDto;
+import com.company.rewards.dto.RewardResponseDto;
+import com.company.rewards.dto.TransactionDto;
 import com.company.rewards.model.Customer;
 import com.company.rewards.model.Transaction;
 import com.company.rewards.repository.CustomerRepository;
@@ -10,55 +11,70 @@ import com.company.rewards.service.RewardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Service
 public class RewardServiceImpl implements RewardService {
+
     private final CustomerRepository customerRepository;
     private final TransactionRepository transactionRepository;
 
+    private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
+
     @Autowired
-    public RewardServiceImpl(CustomerRepository customerRepository, TransactionRepository transactionRepository) {
+    public RewardServiceImpl(CustomerRepository customerRepository,
+                             TransactionRepository transactionRepository) {
         this.customerRepository = customerRepository;
         this.transactionRepository = transactionRepository;
     }
 
     @Override
-    public Optional<RewardResponseDTO> getRewardsForCustomer(Long customerId, Integer months, LocalDate from, LocalDate to) {
-        Optional<Customer> customerOpt = customerRepository.findById(customerId);
-        if (!customerOpt.isPresent()) {
+    public Optional<RewardResponseDto> getRewardsForCustomer(RewardRequestDto request) {
+        Optional<Customer> customerOpt = customerRepository.findById(request.getCustomerId());
+
+        if (customerOpt.isEmpty()) {
             return Optional.empty();
         }
+
         Customer customer = customerOpt.get();
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start;
-        LocalDateTime end = now;
-        if (from != null && to != null) {
-            start = from.atStartOfDay();
-            end = to.atTime(23, 59, 59);
-        } else if (months != null && months > 0) {
-            start = now.minusMonths(months);
+        LocalDateTime end=now;
+
+        if (request.getFrom() != null && request.getTo() != null) {
+            start = request.getFrom().atStartOfDay();
+            end = request.getTo().atTime(LocalTime.MAX); // full day coverage
+        } else if (request.getMonths() != null && request.getMonths() > 0) {
+            start = now.minusMonths(request.getMonths());
         } else {
-            start = now.minusMonths(3);
+            start = now.minusMonths(3); // default window
         }
-        List<Transaction> transactions = transactionRepository.findByCustomerIdAndDateRange(customerId, start, end);
+
+        List<Transaction> transactions =
+                transactionRepository.findByCustomer_IdAndTransactionDateBetween(request.getCustomerId(), start, end);
+
         Map<String, Integer> monthlyPoints = new HashMap<>();
         int totalPoints = 0;
-        List<TransactionDTO> transactionDTOs = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
+        List<TransactionDto> transactionDTOs = new ArrayList<>();
+
         for (Transaction t : transactions) {
-            int points = calculatePoints(t.getAmount());
-            String month = t.getTransactionDate().format(formatter);
-            monthlyPoints.put(month, monthlyPoints.getOrDefault(month, 0) + points);
+            int points = calculatePoints(BigDecimal.valueOf(t.getAmount()));
+            String month = t.getTransactionDate().format(MONTH_FORMATTER);
+            monthlyPoints.merge(month, points, Integer::sum);
             totalPoints += points;
-            transactionDTOs.add(new TransactionDTO(t.getId(), t.getAmount(), t.getTransactionDate(), points));
+            transactionDTOs.add(new TransactionDto(
+                    t.getId(),
+                    t.getAmount(),
+                    t.getTransactionDate(),
+                    points
+            ));
         }
-        RewardResponseDTO response = new RewardResponseDTO(
+
+        RewardResponseDto response = new RewardResponseDto(
                 customer.getId(),
                 customer.getName(),
                 customer.getEmail(),
@@ -66,17 +82,21 @@ public class RewardServiceImpl implements RewardService {
                 totalPoints,
                 transactionDTOs
         );
+
         return Optional.of(response);
     }
 
-    private int calculatePoints(double amount) {
-        int points = 0;
-        if (amount > 100) {
-            points += (int) ((amount - 100) * 2);
-            points += 50; // 1 point for each dollar between 50 and 100
-        } else if (amount > 50) {
-            points += (int) (amount - 50);
+    private int calculatePoints(BigDecimal amount) {
+        BigDecimal hundred = BigDecimal.valueOf(100);
+        BigDecimal fifty = BigDecimal.valueOf(50);
+
+        if (amount.compareTo(hundred) > 0) {
+            // Above 100: 2 points per dollar + 50 points for 50–100 range
+            return amount.subtract(hundred).multiply(BigDecimal.valueOf(2)).intValue() + 50;
+        } else if (amount.compareTo(fifty) > 0) {
+            // Between 50 and 100: 1 point per dollar
+            return amount.subtract(fifty).intValue();
         }
-        return points;
+        return 0;
     }
 }

@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor   // generates a constructor with all fields
 @NoArgsConstructor 
-public class TransactionDTO {
+public class TransactionDto {
     private Long id;
     private double amount;
     private LocalDateTime transactionDate;

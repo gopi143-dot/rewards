@@ -1,18 +1,23 @@
 package com.company.rewards.controller;
 
-import com.company.rewards.dto.RewardRequestDTO;
-import com.company.rewards.dto.RewardResponseDTO;
+import com.company.rewards.dto.ErrorResponseDto;
+import com.company.rewards.dto.RewardRequestDto;
+import com.company.rewards.dto.RewardResponseDto;
 import com.company.rewards.service.RewardService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/rewards")
+@Validated
 public class RewardController {
+
     private final RewardService rewardService;
 
     @Autowired
@@ -20,26 +25,24 @@ public class RewardController {
         this.rewardService = rewardService;
     }
 
-    @PostMapping("/customer/rewards")
-    public ResponseEntity<?> getRewardsForCustomer(@RequestBody RewardRequestDTO request) {
-        if (request.getCustomerId() == null) {
-            return ResponseEntity.badRequest().body("CustomerId is required");
+    /**
+     * GET endpoint that binds query parameters into RewardRequestDto.
+     * Example:
+     *   /api/rewards/customer?customerId=1&months=3
+     *   /api/rewards/customer?customerId=1&from=2026-03-01&to=2026-03-20
+     */
+    @GetMapping("/customer")
+    public ResponseEntity<?> getRewardsForCustomer(@Valid RewardRequestDto request) {
+        Optional<RewardResponseDto> response = rewardService.getRewardsForCustomer(request);
+
+        if (response.isEmpty()) {
+            ErrorResponseDto error = new ErrorResponseDto(
+                    HttpStatus.NOT_FOUND.toString(),
+                    "Customer not found"
+            );
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
         }
-        if (request.getMonths() != null && request.getMonths() <= 0) {
-            return ResponseEntity.badRequest().body("Months must be positive");
-        }
-        if ((request.getFrom() != null && request.getTo() == null) || (request.getFrom() == null && request.getTo() != null)) {
-            return ResponseEntity.badRequest().body("Both 'from' and 'to' dates must be provided together");
-        }
-        Optional<RewardResponseDTO> response = rewardService.getRewardsForCustomer(
-                request.getCustomerId(),
-                request.getMonths(),
-                request.getFrom(),
-                request.getTo()
-        );
-        if (!response.isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Customer not found");
-        }
+
         return ResponseEntity.ok(response.get());
     }
 }

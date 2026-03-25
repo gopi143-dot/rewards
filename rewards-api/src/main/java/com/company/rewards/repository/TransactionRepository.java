@@ -11,8 +11,10 @@ import java.util.List;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+
     List<Transaction> findByCustomerId(Long customerId);
 
-    @Query("SELECT t FROM Transaction t WHERE t.customerId = :customerId AND t.transactionDate BETWEEN :from AND :to")
-    List<Transaction> findByCustomerIdAndDateRange(@Param("customerId") Long customerId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    List<Transaction> findByCustomer_IdAndTransactionDateBetween(Long customerId,
+            LocalDateTime from,
+            LocalDateTime to);
 }

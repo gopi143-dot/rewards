@@ -1,9 +1,10 @@
 package com.company.rewards.service;
 
-import com.company.rewards.dto.RewardResponseDTO;
+import com.company.rewards.dto.RewardRequestDto;
+import com.company.rewards.dto.RewardResponseDto;
 import java.time.LocalDate;
 import java.util.Optional;
 
 public interface RewardService {
-    Optional<RewardResponseDTO> getRewardsForCustomer(Long customerId, Integer months, LocalDate from, LocalDate to);
+	Optional<RewardResponseDto> getRewardsForCustomer(RewardRequestDto request);
 }
