@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -29,7 +30,7 @@ public class Transaction {
 
     @Min(value = 0, message = "Amount must be non-negative")
     @Column(nullable = false)
-    private double amount;
+    private BigDecimal amount;
 
     @NotNull(message = "Transaction date is required")
     @PastOrPresent(message = "Transaction date cannot be in the future")

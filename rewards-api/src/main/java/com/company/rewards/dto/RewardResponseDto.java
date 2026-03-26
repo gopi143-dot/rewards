@@ -1,11 +1,15 @@
 package com.company.rewards.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
 
 @Data
+@AllArgsConstructor   // generates a constructor with all fields
+@NoArgsConstructor 
 public class RewardResponseDto {
     private Long customerId;
     private String customerName;
@@ -14,14 +18,4 @@ public class RewardResponseDto {
     private int totalPoints;
     private List<TransactionDto> transactions;
 
-    public RewardResponseDto() {}
-
-    public RewardResponseDto(Long customerId, String customerName, String customerEmail, Map<String, Integer> monthlyPoints, int totalPoints, List<TransactionDto> transactions) {
-        this.customerId = customerId;
-        this.customerName = customerName;
-        this.customerEmail = customerEmail;
-        this.monthlyPoints = monthlyPoints;
-        this.totalPoints = totalPoints;
-        this.transactions = transactions;
-    }
 }

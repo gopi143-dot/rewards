@@ -6,5 +6,5 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 public interface RewardService {
-	Optional<RewardResponseDto> getRewardsForCustomer(RewardRequestDto request);
+	Optional<RewardResponseDto> getRewardsForCustomer(Long customerId,RewardRequestDto request);
 }

@@ -1,7 +1,5 @@
 package com.company.rewards.controller;
 
-import com.company.rewards.dto.ErrorResponseDto;
-import com.company.rewards.dto.RewardRequestDto;
 import com.company.rewards.dto.RewardResponseDto;
 import com.company.rewards.service.RewardService;
 import org.junit.jupiter.api.Test;
@@ -9,10 +7,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -29,41 +25,35 @@ class RewardControllerTest {
     private RewardService rewardService;
 
     @Test
-    void testMissingCustomerId() throws Exception {
-        mockMvc.perform(get("/api/rewards/customer")
+    void testInvalidCustomerId() throws Exception {
+        mockMvc.perform(get("/api/rewards/customer/0")
                         .param("months", "3"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void testInvalidMonths() throws Exception {
-        mockMvc.perform(get("/api/rewards/customer")
-                        .param("customerId", "21")
+        mockMvc.perform(get("/api/rewards/customer/21")
                         .param("months", "0"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void testMissingFromOrTo() throws Exception {
-        mockMvc.perform(get("/api/rewards/customer")
-                        .param("customerId", "21")
-                        .param("from", "2026-01-01T00:00:00"))
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("from", "2026-01-01"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void testCustomerNotFound() throws Exception {
-        RewardRequestDto request = new RewardRequestDto();
-        request.setCustomerId(21L);
-        request.setMonths(3);
-
-        Mockito.when(rewardService.getRewardsForCustomer(Mockito.any()))
+        Mockito.when(rewardService.getRewardsForCustomer(Mockito.eq(21L), Mockito.any()))
                 .thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/rewards/customer")
-                        .param("customerId", "21")
+        mockMvc.perform(get("/api/rewards/customer/21")
                         .param("months", "3"))
                 .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("404 NOT_FOUND"))
                 .andExpect(jsonPath("$.errorMessage").value("Customer not found"));
     }
 
@@ -78,11 +68,10 @@ class RewardControllerTest {
                 Collections.emptyList()
         );
 
-        Mockito.when(rewardService.getRewardsForCustomer(Mockito.any()))
+        Mockito.when(rewardService.getRewardsForCustomer(Mockito.eq(21L), Mockito.any()))
                 .thenReturn(Optional.of(mockResponse));
 
-        mockMvc.perform(get("/api/rewards/customer")
-                        .param("customerId", "21")
+        mockMvc.perform(get("/api/rewards/customer/21")
                         .param("months", "3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.customerId").value(21))
@@ -102,13 +91,12 @@ class RewardControllerTest {
                 Collections.emptyList()
         );
 
-        Mockito.when(rewardService.getRewardsForCustomer(Mockito.any()))
+        Mockito.when(rewardService.getRewardsForCustomer(Mockito.eq(21L), Mockito.any()))
                 .thenReturn(Optional.of(mockResponse));
 
-        mockMvc.perform(get("/api/rewards/customer")
-                        .param("customerId", "21")
-                        .param("from", "2026-03-01")   // ✅ only date
-                        .param("to", "2026-03-20"))   // ✅ only date
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("from", "2026-03-01")
+                        .param("to", "2026-03-20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.customerId").value(21))
                 .andExpect(jsonPath("$.customerName").value("Bob"))

@@ -11,9 +11,6 @@ import lombok.Data;
 @Data
 public class RewardRequestDto {
 
-    @NotNull(message = "Customer ID must not be null")
-    private Long customerId;
-
     @Min(value = 1, message = "Months must be at least 1")
     private Integer months;
 
@@ -27,8 +24,26 @@ public class RewardRequestDto {
      * Custom validation: both 'from' and 'to' must be provided together.
      */
     @AssertTrue(message = "Both 'from' and 'to' dates must be provided together")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public boolean isDateRangeValid() {
         return (from == null && to == null) || (from != null && to != null);
+    }
+    
+    @AssertTrue(message = "'from' date must be before or equal to 'to' date")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isFromBeforeTo() {
+        if (from != null && to != null) {
+            return !from.isAfter(to);
+        }
+        return true; // valid if either is null (handled by isDateRangeValid)
+    }
+
+    @AssertTrue(message = "Provide either 'months' or a date range, not both")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isExclusiveChoice() {
+        boolean hasMonths = months != null;
+        boolean hasDateRange = (from != null && to != null);
+        return !(hasMonths && hasDateRange);
     }
 
 }
