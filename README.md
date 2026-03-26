@@ -8,9 +8,9 @@ A Spring Boot application that provides a RESTful API for managing customers, tr
 - Manage customers and their transactions.
 - Reward points calculation based on transaction amounts.
 - Flexible reward retrieval:
-  - By custom date range.
-  - By configurable number of past months.
-  - Default: last 3 months.
+- By custom date range.
+- By configurable number of past months.
+- Default: last 3 months.
 - Monthly breakdown of points and total points.
 - Transaction details included in responses.
 - Interactive API documentation with Swagger UI.
@@ -39,24 +39,24 @@ A Spring Boot application that provides a RESTful API for managing customers, tr
 ---
 
 ## 📡 Sample Request
-curl -X 'GET' \
+[curl -X 'GET' \
   'http://localhost:8080/api/rewards/customer?customerId=21&months=1&from=2026-01-01&to=2026-03-25&dateRangeValid=true' \
-  -H 'accept: */*'
+  -H 'accept: */*'](http://localhost:8080/api/rewards/customer/21?from=2026-01-01&to=2026-03-20)
 
 ---
 
 ## 📊 Sample Response
 
-  {
+{
   "customerId": 21,
   "customerName": "Alice",
   "customerEmail": "alice@example.com",
   "monthlyPoints": {
-    "2026-03": 427,
+    "2026-03": 404,
     "2026-01": 90,
-    "2026-02": 351
+    "2026-02": 352
   },
-  "totalPoints": 868,
+  "totalPoints": 846,
   "transactions": [
     {
       "id": 33,
@@ -68,13 +68,7 @@ curl -X 'GET' \
       "id": 34,
       "amount": 150.5,
       "transactionDate": "2026-03-15T15:30:00",
-      "rewardPoints": 151
-    },
-    {
-      "id": 37,
-      "amount": 75,
-      "transactionDate": "2026-03-23T00:00:00",
-      "rewardPoints": 25
+      "rewardPoints": 152
     },
     {
       "id": 45,
@@ -86,7 +80,7 @@ curl -X 'GET' \
       "id": 46,
       "amount": 250.75,
       "transactionDate": "2026-02-12T14:45:00",
-      "rewardPoints": 351
+      "rewardPoints": 352
     },
     {
       "id": 47,
@@ -98,7 +92,7 @@ curl -X 'GET' \
       "id": 48,
       "amount": 150.5,
       "transactionDate": "2026-03-15T15:30:00",
-      "rewardPoints": 151
+      "rewardPoints": 152
     }
   ]
 }
