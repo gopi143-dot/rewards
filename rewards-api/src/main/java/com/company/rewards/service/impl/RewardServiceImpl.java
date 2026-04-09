@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import com.company.rewards.dto.RewardRequestDto;
 import com.company.rewards.dto.RewardResponseDto;
 import com.company.rewards.dto.TransactionDto;
+import com.company.rewards.exception.CustomerNotFoundException;
 import com.company.rewards.model.Customer;
 import com.company.rewards.model.Transaction;
 import com.company.rewards.repository.CustomerRepository;
@@ -40,13 +41,9 @@ public class RewardServiceImpl implements RewardService {
 
     @Override
     public Optional<RewardResponseDto> getRewardsForCustomer(Long customerId, RewardRequestDto request) {
-        Optional<Customer> customerOpt = customerRepository.findById(customerId);
+    	Customer customer = customerRepository.findById(customerId)
+    	        .orElseThrow(() -> new CustomerNotFoundException(customerId));
 
-        if (customerOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Customer customer = customerOpt.get();
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start;
         LocalDateTime end = now;
@@ -64,23 +61,26 @@ public class RewardServiceImpl implements RewardService {
                 transactionRepository.findByCustomer_IdAndTransactionDateBetween(customerId, start, end);
 
         Map<String, Integer> monthlyPoints = new HashMap<>();
-        int totalPoints = 0;
         List<TransactionDto> transactionDTOs = new ArrayList<>();
 
         for (Transaction t : transactions) {
-            // Assuming Transaction.amount is BigDecimal
             int points = calculatePoints(t.getAmount());
             String month = t.getTransactionDate().format(MONTH_FORMATTER);
             monthlyPoints.merge(month, points, Integer::sum);
-            totalPoints += points;
+
             transactionDTOs.add(new TransactionDto(
                     t.getId(),
-                    t.getAmount(),          // now BigDecimal
+                    t.getAmount(),
                     t.getTransactionDate(),
                     points
             ));
         }
 
+        int totalPoints = monthlyPoints.values()
+                                       .stream()
+                                       .mapToInt(Integer::intValue)
+                                       .sum();
+        
         RewardResponseDto response = new RewardResponseDto(
                 customer.getId(),
                 customer.getName(),
