@@ -1,24 +1,29 @@
 package com.company.rewards.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
 import com.company.rewards.dto.RewardRequestDto;
 import com.company.rewards.dto.RewardResponseDto;
-import com.company.rewards.dto.TransactionDto;
 import com.company.rewards.exception.CustomerNotFoundException;
 import com.company.rewards.model.Customer;
 import com.company.rewards.model.Transaction;
 import com.company.rewards.repository.CustomerRepository;
 import com.company.rewards.repository.TransactionRepository;
 import com.company.rewards.service.impl.RewardServiceImpl;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class RewardServiceImplTest {
 
@@ -181,4 +186,65 @@ class RewardServiceImplTest {
         Optional<RewardResponseDto> response = rewardService.getRewardsForCustomer(7L, request);
         assertEquals(1999999850,response.get().getTotalPoints()); // sanity check
     }
+    
+    @Test
+    void testCustomerWithNoTransactions() {
+        Customer customer = createCustomer(10L, "NoTxn User", "notxn@example.com");
+
+        Mockito.when(customerRepository.findById(10L)).thenReturn(Optional.of(customer));
+        Mockito.when(transactionRepository.findByCustomer_IdAndTransactionDateBetween(
+                Mockito.eq(10L), Mockito.any(), Mockito.any()))
+                .thenReturn(Collections.emptyList());
+
+        RewardRequestDto request = new RewardRequestDto();
+        request.setMonths(3);
+
+        Optional<RewardResponseDto> response = rewardService.getRewardsForCustomer(10L, request);
+        assertEquals(0, response.get().getTotalPoints());
+        assertTrue(response.get().getTransactions().isEmpty());
+    }
+
+    @Test
+    void testRewardCalculationAt50Boundary() {
+        Customer customer = createCustomer(11L, "Fifty User", "fifty@example.com");
+        Transaction t1 = createTransaction(11L, customer, new BigDecimal("50.00"), LocalDateTime.now());
+
+        Mockito.when(customerRepository.findById(11L)).thenReturn(Optional.of(customer));
+        Mockito.when(transactionRepository.findByCustomer_IdAndTransactionDateBetween(
+                Mockito.eq(11L), Mockito.any(), Mockito.any()))
+                .thenReturn(Collections.singletonList(t1));
+
+        RewardRequestDto request = new RewardRequestDto();
+        request.setMonths(1);
+
+        Optional<RewardResponseDto> response = rewardService.getRewardsForCustomer(11L, request);
+        assertEquals(0, response.get().getTotalPoints()); 
+    }
+    
+    
+    @Test
+    void testMultipleTransactionsInSameMonth() {
+        Customer customer = createCustomer(12L, "Aggregator", "agg@example.com");
+        LocalDateTime now = LocalDateTime.now();
+
+        Transaction t1 = createTransaction(12L, customer, BigDecimal.valueOf(120), now.minusDays(3));
+        Transaction t2 = createTransaction(13L, customer, BigDecimal.valueOf(80), now.minusDays(2));
+
+        Mockito.when(customerRepository.findById(12L)).thenReturn(Optional.of(customer));
+        Mockito.when(transactionRepository.findByCustomer_IdAndTransactionDateBetween(
+                Mockito.eq(12L), Mockito.any(), Mockito.any()))
+                .thenReturn(Arrays.asList(t1, t2));
+
+        RewardRequestDto request = new RewardRequestDto();
+        request.setMonths(1);
+
+        Optional<RewardResponseDto> response = rewardService.getRewardsForCustomer(12L, request);
+
+        assertEquals(120, response.get().getTotalPoints());
+
+        String monthKey = now.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        assertEquals(120, response.get().getMonthlyPoints().get(monthKey));
+    }
+
+
 }
