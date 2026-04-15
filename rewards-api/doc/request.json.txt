@@ -1,0 +1,5 @@
+http://localhost:8080/api/rewards/customer/1?from=2024-01-01&to=2024-12-05
+
+http://localhost:8080/api/rewards/customer/1?months=1
+
+http://localhost:8080/api/rewards/customer/1

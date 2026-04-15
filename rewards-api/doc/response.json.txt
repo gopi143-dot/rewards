@@ -1,0 +1,30 @@
+{
+  "customerId": 1,
+  "customerName": "Alice",
+  "customerEmail": "alice@example.com",
+  "monthlyPoints": {
+    "2024-02": 450,
+    "2024-01": 102
+  },
+  "totalPoints": 552,
+  "transactions": [
+    {
+      "id": 7,
+      "amount": 0,
+      "transactionDate": "2024-01-15T16:00:00",
+      "rewardPoints": 0
+    },
+    {
+      "id": 8,
+      "amount": 125.5,
+      "transactionDate": "2024-01-20T20:15:00",
+      "rewardPoints": 102
+    },
+    {
+      "id": 9,
+      "amount": 300,
+      "transactionDate": "2024-02-05T14:30:00",
+      "rewardPoints": 450
+    }
+  ]
+}
