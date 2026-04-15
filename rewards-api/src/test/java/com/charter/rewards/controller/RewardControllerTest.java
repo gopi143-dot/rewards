@@ -1,0 +1,143 @@
+package com.charter.rewards.controller;
+
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.charter.rewards.dto.RewardResponseDto;
+import com.charter.rewards.service.RewardService;
+
+import java.util.Collections;
+import java.util.Optional;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(RewardController.class)
+class RewardControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private RewardService rewardService;
+
+
+    @Test
+    void testInvalidMonths() throws Exception {
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("months", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.months")
+                           .value("Months must be at least 1"));
+    }
+
+    @Test
+    void testNegativeMonths() throws Exception {
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("months", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.months")
+                           .value("Months must be at least 1"));
+    }
+
+    @Test
+    void testMissingFromOrTo() throws Exception {
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("from", "2026-01-01"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.dateRangeValid")
+                           .value("Both 'from' and 'to' dates must be provided together"));
+    }
+
+    @Test
+    void testFromAfterTo() throws Exception {
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("from", "2026-03-20")
+                        .param("to", "2026-03-01"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fromBeforeTo")
+                           .value("'from' date must be before or equal to 'to' date"));
+    }
+    
+    @Test
+    void testInvalidCustomerId() throws Exception {
+        mockMvc.perform(get("/api/rewards/customer/0")
+                        .param("months", "3"))
+                .andExpect(status().isBadRequest());
+           
+    }
+
+    @Test
+    void testMonthsAndDateRangeTogether() throws Exception {
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("months", "3")
+                        .param("from", "2026-03-01")
+                        .param("to", "2026-03-20"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.exclusiveChoice")
+                           .value("Provide either 'months' or a date range, not both"));
+    }
+
+    @Test
+    void testCustomerNotFound() throws Exception {
+        Mockito.when(rewardService.getRewardsForCustomer(Mockito.eq(21L), Mockito.any()))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("months", "3"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("404 NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value("Customer not found"));
+    }
+
+    @Test
+    void testValidResponse() throws Exception {
+        RewardResponseDto mockResponse = new RewardResponseDto(
+                21L,
+                "Alice",
+                "alice@example.com",
+                Collections.singletonMap("2026-03", 90),
+                90,
+                Collections.emptyList()
+        );
+
+        Mockito.when(rewardService.getRewardsForCustomer(Mockito.eq(21L), Mockito.any()))
+                .thenReturn(Optional.of(mockResponse));
+
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("months", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerId").value(21))
+                .andExpect(jsonPath("$.customerName").value("Alice"))
+                .andExpect(jsonPath("$.customerEmail").value("alice@example.com"))
+                .andExpect(jsonPath("$.totalPoints").value(90));
+    }
+
+    @Test
+    void testValidResponseWithDateRange() throws Exception {
+        RewardResponseDto mockResponse = new RewardResponseDto(
+                21L,
+                "Bob",
+                "bob@example.com",
+                Collections.singletonMap("2026-03", 50),
+                50,
+                Collections.emptyList()
+        );
+
+        Mockito.when(rewardService.getRewardsForCustomer(Mockito.eq(21L), Mockito.any()))
+                .thenReturn(Optional.of(mockResponse));
+
+        mockMvc.perform(get("/api/rewards/customer/21")
+                        .param("from", "2026-03-01")
+                        .param("to", "2026-03-20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerId").value(21))
+                .andExpect(jsonPath("$.customerName").value("Bob"))
+                .andExpect(jsonPath("$.customerEmail").value("bob@example.com"))
+                .andExpect(jsonPath("$.totalPoints").value(50));
+    }
+}
